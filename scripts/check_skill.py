@@ -19,7 +19,8 @@ def check(docs: Path | None) -> list[str]:
     if not re.match(r"\A---\nname: pawabase\ndescription: .+\n---\n", body):
         errors.append("SKILL.md: expected Pawabase YAML frontmatter")
 
-    for file in sorted(ROOT.rglob("*.md")):
+    files = [ROOT / "SKILL.md", ROOT / "README.md", *sorted((ROOT / "references").rglob("*.md"))]
+    for file in files:
         content = file.read_text()
         for target in LINK.findall(content):
             if "://" not in target and not (file.parent / target).exists():

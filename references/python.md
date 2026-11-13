@@ -1,6 +1,6 @@
 # Python client and function kit
 
-The verified `pawabase` 0.2.0 wheel requires Python 3.11+ and `httpx`. It provides a flat synchronous/async client plus function authoring, local emulation, testing, and deployment. It does **not** provide the `pb.auth`, `pb.from_`, `pb.realtime`, `pb.storage`, `pb.ai`, and `pb.manage` namespaces shown in some newer product docs. Check `pawabase.__version__` and `dir(Pawabase)` before adapting a docs example.
+The verified `pawabase` 0.2.0 wheel requires Python 3.11+ and `httpx`. It provides a flat synchronous/async client plus function authoring, local emulation, testing, and deployment. It does **not** provide the `pb.auth`, `pb.from_`, `pb.realtime`, `pb.storage`, `pb.ai`, and `pb.manage` namespaces shown in some newer product docs. The current runtime inventory says functions are not a current product area, so verify that the target deployment accepts function routes before using this kit for new server logic. Check `pawabase.__version__` and `dir(Pawabase)` before adapting a docs example.
 
 ```python
 from pawabase import Pawabase
@@ -31,4 +31,4 @@ async def hello(ctx):
 
 `FakeRuntime` and `call` from `pawabase.testing` run a function in tests without a server and record side effects. The function context can use `ctx.runtime` for data, events, mail, HTTP, and storage according to the installed kit. Test the actual side effect or error behavior, not merely the decorator.
 
-CLI sequence: `pawabase init`, `pawabase link`, set `PAWABASE_URL` and `PAWABASE_API_KEY` in local secrets, `pawabase test`, `pawabase emulate --watch`, then `pawabase deploy`. `pawabase.toml` holds project/environment, never the key. `deploy --dry-run` previews; `invoke`, `trigger`, `functions`, `deployments`, `rollback`, `branches`, and `logs` cover operation. Read the installed CLI's `--help` before using flags in automation.
+For a compatible function deployment, the kit's CLI sequence is `pawabase init`, `pawabase link`, set `PAWABASE_URL` and `PAWABASE_API_KEY` in local secrets, `pawabase test`, `pawabase emulate --watch`, then `pawabase deploy`. `pawabase.toml` holds project/environment, never the key. `deploy --dry-run` previews; `invoke`, `trigger`, `functions`, `deployments`, `rollback`, `branches`, and `logs` cover operation. This is **not** the `pawabase-iac` deployment workflow even though both use a `pawabase` executable. Read the installed CLI's `--help` before using flags in automation.

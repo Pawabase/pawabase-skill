@@ -1,6 +1,6 @@
 # Pawabase skill
 
-An official Pawabase skill for coding agents. It routes Pawabase tasks to focused guidance on the system, TypeScript and Python clients, HTTP, auth and policies, data, storage, realtime, automation, AI, and operations. The skill distinguishes documented product capabilities from methods verified in a particular SDK release.
+An official Pawabase skill for coding agents. It routes Pawabase tasks to focused guidance on the system, TypeScript and Python clients, HTTP, auth and policies, data, storage, realtime, automation, AI, and operations. A scenario map covers common tasks and a catalog locates every page in the checked docs checkout. The skill distinguishes documented product capabilities from methods verified in a particular SDK release.
 
 ## Install in Codex
 
@@ -21,6 +21,8 @@ The target environment's API Explorer and the installed SDK version take priorit
 ```bash
 python3 scripts/check_skill.py
 python3 scripts/check_skill.py --docs ../pawabase-docs
+python3 scripts/build_catalog.py --docs ../pawabase-docs --check
 ```
 
 The second command checks referenced docs paths against a local checkout. The skill-creator `quick_validate.py` checks the skill frontmatter and scaffold structure when available.
+To refresh the complete docs locator after documentation changes, run `python3 scripts/build_catalog.py --docs ../pawabase-docs` and review the generated diff.

@@ -12,6 +12,8 @@ Auth can support email/password, links/codes, social/company login, passkeys, MF
 
 Token profiles issue separate tokens for other services; they do not replace the Pawabase session. A receiver validates the profile token's signature, audience, issuer, and expiry against the environment JWKS. User metadata is editable by the user: use server-controlled roles or app metadata for authority.
 
+For guest users, upgrade the existing guest identity when they register so guest-owned rows remain attached. For organizations, check that an active organization is selected before using `$auth.org` in a rule; a signed-in user can still have no active organization. A user API key acts as that person and ends with their authority, while a machine identity acts as itself and has its own roles. OAuth, password reset, invitations, and verification links need environment-specific redirect allowlists. See `auth/guests.mdx`, `auth/organizations.mdx`, `auth/machines.mdx`, and `auth/redirect-urls.mdx`.
+
 ## Policy evaluation
 
 Access rules are attached to individual resource operations, bucket actions, flows, routes, channels, agents, and models. Rules can inspect `$auth`, `$record`, `$input`, `$request`, `$credential`, `$object`, `$event`, and `$now`. Common policies include public, authenticated, record owner, role/permission, organization, scope, and custom conditions. A secret key always passes policy, which makes it a poor credential for testing user access.

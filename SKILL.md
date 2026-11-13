@@ -11,6 +11,8 @@ Pawabase provides environment-scoped app backends: resources over database table
 
 Identify the target project, environment, gateway URL, caller identity, key type, and installed SDK version when they matter. Inspect the target environment's generated OpenAPI in Studio for exact endpoints and schemas. Use [source and compatibility](references/source-map.md) to resolve disagreements between documentation and packages. Never assume a client method exists because Studio supports the feature.
 
+For a broad or unfamiliar request, find the closest case in the [scenario map](references/scenario-map.md). If it is not listed, search the [docs catalog](references/docs-catalog.md) for the feature, check its current product status, then verify the deployed contract. Treat these maps as locators, not promises that every deployment supports every feature.
+
 ## Read by task
 
 | Task | Reference |
@@ -26,6 +28,9 @@ Identify the target project, environment, gateway URL, caller identity, key type
 | Flows, routes, jobs, events, webhooks, mail | [Automation](references/automation.md) |
 | Models, vector search, agents, knowledge | [AI](references/ai.md) |
 | Studio, management, IaC, releases, debugging | [Operations](references/operations.md) |
+| Cloud setup, self-hosting, backups, API versions, incident recovery | [Platform lifecycle](references/platform-lifecycle.md) |
+| Feature gaps, legacy paths, and unsupported behavior | [Capability boundaries](references/capability-boundaries.md) |
+| Failing requests, missing data, live updates, jobs, or mail | [Troubleshooting](references/troubleshooting.md) |
 
 Read only the relevant references. For a feature crossing areas, read both and verify the boundary with an actual request or test.
 
@@ -37,3 +42,5 @@ Read only the relevant references. For a feature crossing areas, read both and v
 - A resource definition and its physical database table are separate; changing the definition can require a migration.
 - Background events can be delivered more than once. Make side effects idempotent. Realtime is a notification path; records hold durable state.
 - Do not claim an SDK method, endpoint, or retry guarantee until verified in the installed version or target OpenAPI. Prefer a verified raw HTTP call when the SDK lacks a feature.
+- Distinguish the Python function kit (`pawabase`) from Pawabase IaC (`pawabase-iac`). Both document a `pawabase` CLI; inspect the installed command and package before using it.
+- Before destructive restore, schema, key, or bulk replay work, inspect the target environment and the concrete plan/backup. Pawabase backups exclude stored file bytes, secrets, and raw API keys.

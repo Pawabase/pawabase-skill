@@ -18,3 +18,10 @@ For `GET /rest/v1/tasks`, the edge checks key/scope/limits, auth resolves the ca
 - Filtering/sorting/selecting an unknown field is rejected. Write-only columns are not returned; vector columns are normally omitted unless explicitly requested.
 
 Generated TypeScript types come from an environment's OpenAPI, which includes its actual resources. Relations added by `expand` may need an explicit row type. For schema changes, prefer versioned IaC/promotions where the project uses them, then validate migration and API shape in the target environment. Read `database/how-data-works.mdx`, `database/rest-api.mdx`, `database/migrations-and-history.mdx`, and `database/relations.mdx` in the docs repo.
+
+## Cross-cutting data cases
+
+- **External writers:** ordinary API writes emit events, invalidate cache, and can broadcast. SQL or another service writing directly needs the resource's outside-change capture setting for events/realtime; it does not automatically invalidate response cache. Check `database/events-and-realtime.mdx` and `database/caching-and-rate-limits.mdx`.
+- **Bulk and transactions:** client `createMany` may partly succeed. If all records must commit together, use a verified server transaction/flow; for imports, record per-row failures and resume safely. Check `database/bulk-writes.mdx`.
+- **Search and indexes:** `q` only works with configured search fields. Search behavior differs by database dialect; use indexes for selective filters/sorts and inspect query behavior before promising typo tolerance. Check `database/filter.mdx` and `database/indexes.mdx`.
+- **Shared API versions:** v1 and v2 can expose different definitions over the same data. Design additive schema changes until older versions are retired. Check `environments/api-versions.mdx`.
