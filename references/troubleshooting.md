@@ -24,6 +24,8 @@ Start with the exact project, environment, API version, request id, actor/key ty
 | Webhook delivery failed | Signature/config, receiver status, delivery retry | Delivery attempt and receiver logs |
 | Mail not received | Template rendering, provider, paused delivery, DNS, recipient suppression | Mail activity and provider response |
 | AI call fails | Model alias, provider key, rule, quota, approval/cost limit | Model/agent run and provider error |
+| AI client cannot connect to Pawabase MCP | `/mcp/v1` POST, secret key, management scope, HTTPS/origin, enabled setting | `tools/list` result and `mcp.tool` audit entries |
+| Pawabase agent cannot reach external MCP | Connection URL, outbound host policy, external credential, agent allowlist | Studio connection Check and agent run tool error |
 | Production only | Different keys, secrets, settings, definitions, API version, origin/domain | Environment diff and recent audit entries |
 
 For a user-visible error, keep the request id and avoid leaking hidden-record existence, secret values, or full tokens. If the failure is asynchronous, follow the event → subscription → flow/job → webhook/mail chain rather than assuming the initiating HTTP call failed. Read the topic's troubleshooting page and `activity/requests.mdx`, `activity/background-work.mdx`, `policies/debugging.mdx`, or `guides/production-checklist.mdx` in the docs repo as appropriate.

@@ -11,6 +11,7 @@ Use this when a request spans several Pawabase areas or uses product language ra
 | Add a Node backend | `quickstarts/node.mdx` | Choose user-scoped versus service credentials per request. |
 | Add a Python service | `quickstarts/python.mdx` | Inspect installed package; current wheel may lack docs namespaces. |
 | Connect an AI coding tool | `ai/mcp.mdx` | Scope its environment key; distinguish read and build authority. |
+| Give a Pawabase agent external MCP tools | `ai/apps/overview.mdx`, `ai/agents/tools.mdx` | Outbound connection secret and agent tool allowlist are separate from Pawabase's inbound MCP key. |
 | Work across dev/staging/prod | `guides/environments-workflow.mdx` | Definitions promote; data, users, keys and secrets stay separate. |
 | Create a PR preview backend | `environments/previews.mdx` | Preview starts without rows, files, users or secrets. |
 

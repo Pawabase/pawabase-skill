@@ -22,6 +22,7 @@ Do not elevate an example in newer docs to an SDK guarantee. If sources disagree
 Inspect Python with `python3 -c 'import pawabase; print(pawabase.__version__, pawabase.__all__)'`. Inspect TypeScript with `node_modules/@pawabase/client/package.json` and exported declarations. For raw HTTP, use the environment's OpenAPI; table fields, policies, and enabled operations vary.
 
 For a command named `pawabase`, inspect `command -v pawabase`, `pawabase --help`, and the installed distribution. Do not infer that the function kit's `deploy` and IaC's `deploy` are interchangeable. For runtime feature status, read `PAWABASE_FEATURE_INVENTORY.md` section **Explicit boundaries and non-features** and check the deployed capability before proposing a legacy path.
+The `/mcp/v1` management transport is excluded from generated OpenAPI; use the runtime's `docs/mcp.md` and `pawabase_server/mcp/` for its contract. The client tool catalog is filtered by the connected key's scopes.
 
 ## Topic locator
 
@@ -37,6 +38,7 @@ Paths below are relative to the [docs repository](https://github.com/Pawabase/pa
 | Storage | `storage/upload.mdx`, `storage/urls-and-links.mdx`, `storage/access.mdx` |
 | Logic/automation | `logic/flows.mdx`, `automation/overview.mdx`, `automation/reliability.mdx` |
 | AI | `ai/overview.mdx`, `ai/gateway.mdx`, `ai/agents/overview.mdx` |
+| MCP and agent connections | `ai/mcp.mdx`, `ai/apps/overview.mdx`, plus runtime `docs/mcp.md` |
 | Operations | `environments/overview.mdx`, `tools/iac/overview.mdx`, `activity/overview.mdx` |
 | Cloud, release, recovery | `cloud/overview.mdx`, `environments/api-versions.mdx`, `backups/overview.mdx`, `guides/production-checklist.mdx` |
 
