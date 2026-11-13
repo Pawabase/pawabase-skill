@@ -30,11 +30,12 @@ Query parameters: `filter[field]=operator.value`, `sort`, `page` (from 1), `per_
 | `/auth/v1` | `/signup`, `/token`, `/user`, `/sessions`, `/orgs`, `/mfa`, `/passkeys` | Identity and user account |
 | `/storage/v1` | `/object/{bucket}/{key}`, `/list/{bucket}`, `/sign/{bucket}/{key}` | Files, lists, signed access |
 | `/realtime/v1` | `/publish`, `/sse`, `/channels/{channel}/history` | Live messages and history |
+| `/functions/v1/{name}` | POST, when deployed | Python-authored function invocation |
 | `/flows/v1/{name}` | POST | Named HTTP-triggered flow |
 | `/ai/v1` | `/chat/completions`, `/embeddings`, `/agents/{name}/runs` | Models and agents |
 | `/hooks/v1/{env}/{slug}` | POST | Inbound webhook |
 | `/health/v1` | GET | Health |
 
-The checked public snapshot does not enumerate every resource's dynamic `/rest/v1` routes or the `/platform/v1` management API. Custom routes and functions depend on deployed definitions. Do not guess a body for these families; inspect the operation in target OpenAPI. `/studio` uses a Cloud-signed Studio token, not an app key. Management calls require scoped secret credentials and are restricted to the key's environment.
+The checked public snapshot does not enumerate every resource's dynamic `/rest/v1` routes, deployed `/functions/v1/{name}` functions, or the `/platform/v1` management API. Custom routes are also served under `/rest/v1` according to their definitions. Do not guess a body for these families; inspect the operation in target OpenAPI. `/studio` uses a Cloud-signed Studio token, not an app key. Management calls require scoped secret credentials and are restricted to the key's environment.
 
 Common errors: `401` missing/bad key or needed identity; `403` rule/scope denial; `404` absent/hidden record or disabled operation; `409` uniqueness; `422` input/constraint; `429` rate/quota; `5xx` server. Preserve status, code, details, and request id. Read the docs' `database/rest-api.mdx` and `reference/errors.mdx` for the full wire model.
