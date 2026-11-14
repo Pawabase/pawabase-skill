@@ -50,7 +50,7 @@ folder.
 The skill on its own gives guidance. To let your agent look at and work on a real environment, connect it to Pawabase's MCP
 server as well. The two work together: the skill decides what should happen, MCP lets the agent check and do it.
 
-1. In Studio, open the environment you want, then **AI → AI tools**, and create a secret key with the scope you need:
+1. In Studio, open the environment you want, then **Manage → MCP**, and create a key with the access you need:
    **Look only** (`ai-read`) to inspect, **Build with me** (`ai-build`) to make development changes. It is shown once.
 2. Keep it in your shell or secret manager as `PAWABASE_MCP_KEY`. Never commit it, and never use a publishable `pb_pk_` key here.
 3. Add the server to your agent, using your project's API address:

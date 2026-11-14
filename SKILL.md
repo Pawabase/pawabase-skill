@@ -14,7 +14,8 @@ against the caller's key, identity and policies.
 
 1. **Locate.** Identify the project, environment, API address, who is calling (a person, a server, a machine, an agent), the key
    type, and the installed client version. If Pawabase MCP is connected, start with a harmless overview tool to confirm the
-   environment before asking the user for anything.
+   environment before asking the user for anything; if it is not and the task changes the environment, walk the user through
+   connecting it (see the keys section below).
 2. **Verify the contract.** Check the method exists in the installed package (see [source map](references/source-map.md)), and
    the endpoint and fields exist in the environment's own OpenAPI (Studio → API Explorer). Docs can be ahead of a package; the
    package can be ahead of a deployment.
@@ -22,6 +23,25 @@ against the caller's key, identity and policies.
    by policies rather than by app code.
 4. **Prove it.** Make a real request as the intended caller and as an unrelated one. For data rules, read a row you should and a
    row you should not. For automation, find the run in Activity. Report what you verified and what you did not.
+
+## Keys: when you need one, which, and how to ask
+
+Ask the user only for what the task needs, at the moment it needs it, and say exactly where in Studio it is.
+
+| The task needs | Ask for | Where the user finds it | Where it goes |
+| --- | --- | --- | --- |
+| App code that calls Pawabase | The API address, the environment name, a **publishable** `pb_pk_` key | Studio → Overview → **Connect** | The project's env file (it is safe in a browser bundle) |
+| Server code that administers (manage, admin, share links, captcha verify) | A **secret** `pb_sk_` key | Studio → **Settings → API keys** | A server-only env var. Never in the bundle or git |
+| You to look at or change the environment yourself (tables, policies, flows, mail, data) | An **MCP key**: Look only or Build with me | Studio → **Manage → MCP** | The user's shell as `PAWABASE_MCP_KEY`, then the agent's MCP config. See [the MCP tutorial](references/mcp.md) |
+| A worker or AI agent that acts as itself | A machine's client id and secret | Studio → **Users & auth → Machines** | The service's secret store |
+
+- Publishable keys and addresses may be pasted in chat. **Secret and MCP keys must not be**: ask the user to put them in an env
+  var or secret store themselves, and refer to the variable by name. Never print, log or commit one.
+- Writing code needs no key at all: write it against env var names, and ask for values only to run or test it.
+- Before asking, check what is already there: the project's env files and examples, and whether Pawabase MCP tools are already
+  connected (a harmless `get_overview` or `list_environments` call answers that).
+- Use a **Look only** MCP key for production and a **Build with me** key for development. Only an administrator key can touch
+  users, keys and secrets; if a task needs that, tell the user and let them do it in Studio rather than asking for such a key.
 
 ## Choose the path
 

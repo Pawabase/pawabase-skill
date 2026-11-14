@@ -169,6 +169,6 @@ password sign-in for its members. Add the callback URL to the redirect allowlist
 
 ## 10. Hand an AI coding tool the environment
 
-Create a scoped secret key in Studio → AI → AI tools (**Look only** for production, **Build with me** for development), keep it
-in `PAWABASE_MCP_KEY`, and add the server to the tool (see [MCP](mcp.md)). Then ask for real work: "List the tables, then add a
+Create a scoped key in Studio → **Manage → MCP** (**Look only** for production, **Build with me** for development), keep it
+in `PAWABASE_MCP_KEY`, and add the server to the tool (step by step in [MCP](mcp.md)). Then ask for real work: "List the tables, then add a
 `comments` table owned by the signed-in user, with policies, and show me the migration before applying it."
