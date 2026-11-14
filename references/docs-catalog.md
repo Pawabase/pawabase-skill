@@ -1,6 +1,6 @@
 # Pawabase docs catalog
 
-Generated from the docs checkout at commit `27c168a`. Use this only to find a page; the target deployment and installed SDK remain the contract. Paths are relative to [Pawabase docs](https://github.com/Pawabase/pawabase-docs).
+Generated from the docs checkout at commit `e446b6a`. Use this only to find a page; the target deployment and installed SDK remain the contract. Paths are relative to [Pawabase docs](https://github.com/Pawabase/pawabase-docs).
 
 ## activity
 
@@ -40,7 +40,6 @@ Generated from the docs checkout at commit `27c168a`. Use this only to find a pa
 - `auth/auth-webhooks.mdx` — Auth webhooks
 - `auth/authentication-flow.mdx` — Authentication flow
 - `auth/bot-protection.mdx` — Bot protection
-- `auth/company-sign-in.mdx` — Company sign-in
 - `auth/configuring-auth.mdx` — Configuring Auth
 - `auth/data-requests.mdx` — Data requests
 - `auth/devices.mdx` — Devices
@@ -48,6 +47,9 @@ Generated from the docs checkout at commit `27c168a`. Use this only to find a pa
 - `auth/email-codes.mdx` — Email codes
 - `auth/email-templates.mdx` — Email templates
 - `auth/email-verification.mdx` — Email verification
+- `auth/enterprise-connections.mdx` — Connections
+- `auth/enterprise-roles-and-access.mdx` — Roles and access
+- `auth/enterprise-sign-in.mdx` — Enterprise sign-in
 - `auth/guests.mdx` — Guests
 - `auth/how-auth-works.mdx` — How Auth works
 - `auth/import-and-export.mdx` — Import and export

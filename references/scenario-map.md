@@ -9,7 +9,7 @@ Use this when a request spans several Pawabase areas or uses product language ra
 | Build a signed-in app | `guides/signed-in-app.mdx` | Resource policies must match user identity. |
 | Add a React app | `quickstarts/react.mdx`, `auth/react.mdx` | One client/session; SSR must use per-request user tokens. |
 | Add a Node backend | `quickstarts/node.mdx` | Choose user-scoped versus service credentials per request. |
-| Add a Python service | `quickstarts/python.mdx` | Inspect installed package; current wheel may lack docs namespaces. |
+| Add a Python service | `quickstarts/python.mdx` | `pawabase` 0.9+: async client for channels and live queries. |
 | Connect an AI coding tool | `ai/mcp.mdx` | Scope its environment key; distinguish read and build authority. |
 | Give a Pawabase agent external MCP tools | `ai/apps/overview.mdx`, `ai/agents/tools.mdx` | Outbound connection secret and agent tool allowlist are separate from Pawabase's inbound MCP key. |
 | Work across dev/staging/prod | `guides/environments-workflow.mdx` | Definitions promote; data, users, keys and secrets stay separate. |
@@ -21,7 +21,7 @@ Use this when a request spans several Pawabase areas or uses product language ra
 | --- | --- | --- |
 | Email/password or verification | `auth/email-and-password.mdx`, `auth/email-verification.mdx` | Handle verification-required and redirect allowlists. |
 | Magic links or email codes | `auth/sign-in-links.mdx`, `auth/email-codes.mdx` | Use the flow the environment enabled. |
-| OAuth or company SSO | `auth/social-sign-in.mdx`, `auth/company-sign-in.mdx` | Provider credentials and return URLs are environment-specific. |
+| OAuth or company SSO | `auth/social-sign-in.mdx`, `auth/enterprise-sign-in.mdx`, `auth/enterprise-connections.mdx` | Provider credentials and return URLs are per environment; company connections belong to an organization and route by verified domain. |
 | Passkeys or MFA | `auth/passkeys.mdx`, `auth/two-step-verification.mdx` | Handle second-factor/assurance state, not just initial login. |
 | Guest cart that survives signup | `auth/guests.mdx` | Upgrade the guest identity rather than creating an unrelated user. |
 | Teams, invitations, org data | `auth/organizations.mdx`, `guides/organizations.mdx` | Bind rows and policies to the active organization. |
@@ -74,7 +74,7 @@ Use this when a request spans several Pawabase areas or uses product language ra
 | Semantic search | `ai/vector-search.mdx` | Configure vector field/index and list policy. |
 | Agent using project data | `ai/agents/overview.mdx`, `ai/agents/approvals-and-limits.mdx` | Caller authority, approvals, and cost limits. |
 | Q&A over documents | `ai/knowledge/overview.mdx` | Ingest and search under knowledge rules. |
-| Versioned backend definitions | `tools/iac/overview.mdx` | `pawabase-iac` is separate from the Python function kit. |
+| Versioned backend definitions | `tools/iac/overview.mdx` | `pawabase-iac` is a separate package from the Python client. |
 | Secret/key rotation | `environments/api-keys.mdx`, `secrets/overview.mdx` | Replacement and revocation order affect running clients. |
 | Backup/restore | `backups/overview.mdx`, `backups/restore.mdx` | Object bytes, raw keys and secret values are excluded. |
 | Deploy/release/rollback | `environments/promote.mdx`, `environments/api-versions.mdx` | Promote definitions; inspect compatibility and active traffic. |

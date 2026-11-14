@@ -1,21 +1,40 @@
 # Storage and files
 
-Buckets hold objects addressed by bucket and key. Bucket settings control visibility, allowed types, max size, and access rules for operations. Public read does not grant public upload/list/delete. For per-user files, include an owner or organization segment in the key and write a server rule against `$object.segments`; keep display names and ownership records in data tables where needed.
+Buckets hold objects addressed by bucket and key. Each bucket sets visibility, allowed types and maximum size, and has a
+separate rule per action (read, list, upload, update, delete). Public read never implies public upload, list or delete.
 
-## Verified TypeScript pattern
+For per-person or per-organization files, start the key with the owner (`<user_id>/avatar.png`, `<org_id>/invoices/…`) and
+write the rule against `$object.segments`. Keep display names, ownership and metadata in a table that stores the **key**, not a
+URL, so domain or environment changes never break references.
 
 ```ts
-const avatars = pb.storage.from("avatars");
-await avatars.upload(`${userId}/me.png`, file);
-const blob = await avatars.download(`${userId}/me.png`);
-const { files, prefixes, cursor } = await avatars.list({ prefix: `${userId}/` });
-await avatars.remove(`${userId}/old.png`);
+const docs = pawabase.storage.from("documents");
+await docs.upload(`${userId}/report.pdf`, file);                     // replaces an object at the same key
+const { files, prefixes, cursor } = await docs.list({ prefix: `${userId}/` });
+const blob = await docs.download(`${userId}/report.pdf`);
+await docs.remove(`${userId}/old.pdf`);
 ```
 
-The verified client also provides `getPublicUrl`, `createSignedUrl`, `createSignedUploadUrl`, and `uploadToSignedUrl`. A public URL works only for a public bucket. A signed URL grants temporary access within its scope; the signed upload URL itself is the upload credential, so do not attach a project key to that upload. Replacing an existing key overwrites the object; use unique keys or deliberate versioning when this matters.
+## Addresses
 
-The public OpenAPI snapshot includes `/storage/v1/object/{bucket}/{key}`, `/storage/v1/list/{bucket}`, `/storage/v1/sign/{bucket}/{key}`, `/storage/v1/files/{env}/{bucket}/{key}`, and share-token routes. Verify exact verbs, payloads, and upload form in the target OpenAPI. The verified Python 0.2.0 wheel has no storage namespace; use a newer compatible release or HTTP.
+| You need | Use | Notes |
+| --- | --- | --- |
+| A stable address, public bucket or the bucket's read rule | `fileUrl(key, { width, height, fit, format, quality, rotate })` | `…/storage/v1/files/<env>/<bucket>/<key>`, no key in it; needs `environment` in the client options. Transforms make resized images on the fly (`format: "auto"` picks AVIF or WebP) |
+| A short-lived download | `createSignedUrl(key, { expiresIn })` | The URL itself is the credential |
+| A browser upload without a session | `createSignedUploadUrl` on a server, then `uploadToSignedUrl` in the browser | Do not attach a project key to that upload |
+| A link for people without an account | `createShareLink(key, { expiresIn, permissions, label })` | Secret key, so on a server. Revocable (`revokeShareLink`), counts opens; `view`, `download` or `both`; 60 s to a year |
+| A public bucket's object in a browser | `getPublicUrl(key)` | Refuses a secret key |
 
-Files and records have separate lifecycles. Deleting a record does not automatically prove its referenced object was removed; design explicit cleanup if required. For large uploads, use a signed upload path when supported. Use expiring share links for access outside authenticated clients, and image transforms for derived sizes. Read `storage/buckets.mdx`, `storage/upload.mdx`, `storage/urls-and-links.mdx`, `storage/access.mdx`, and `storage/files-and-records.mdx` in the docs repo.
+Python has the same set in snake_case (`file_url` is `transform_url`, plus `public_url`, `create_share_link`).
 
-An environment backup does **not** include stored object bytes. A restore may bring back rows that point at files absent from the restored object store; plan separate object backup and recovery. Store object keys in rows rather than a gateway URL so environment/domain changes do not corrupt references. Replacing a file at the same key can leave a stale cached image; use versioned keys or cache-aware delivery when immediate updates matter.
+## Lifecycles
+
+- Files and records live separately: deleting a row does not delete its file. Clean up deliberately, from a flow on
+  `<table>.deleted` or a sweep.
+- Writing to an existing key overwrites it, and cached images can stay stale; use versioned keys when it matters.
+- Environment backups do not contain file bytes. A restore can bring back rows pointing at files that are not there: back up the
+  object store separately.
+- Each user's avatar is handled for you: `auth.setAvatar(file)` / `removeAvatar()` store it in an automatic public bucket.
+
+Docs: `storage/buckets.mdx`, `storage/upload.mdx`, `storage/urls-and-links.mdx`, `storage/access.mdx`,
+`storage/files-and-records.mdx`.

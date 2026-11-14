@@ -1,25 +1,49 @@
 # System model
 
-## How the parts connect
+## How a request travels
 
-A project contains isolated environments such as `development`, `staging`, and `production`. Each environment owns its database, users, keys, secrets, resources, rules, files, flows, and settings. The client points at an API URL and presents an environment's key. The public edge checks the key, origins, scopes, limits, rate limits, and quotas, then passes authenticated caller context to the server. The server checks the resource's access rule before reading or changing data. Write operations can emit events, invalidate caches, and broadcast realtime changes. Automation subscriptions can start flows or send webhooks in the background.
+```
+client ── apikey (+ Bearer token) ──▶ gateway ──▶ server ──▶ Postgres
+                                       │            │
+                         key, origin, scope,   caller, policy for this
+                         rate limit, quota     operation, then the work
+                                                    │
+                                   events ─▶ subscriptions ─▶ flows, jobs, webhooks, mail
+                                   changes ─▶ realtime (record changes, live queries)
+```
 
-In the checked-in runtime, `pawabase_server` is one Sillo application and process with a public listener behind the edge plus an internal listener. Studio is a separate browser interface that calls its `/studio` API. Do not infer a microservice boundary between auth, data, flows, and realtime in this runtime.
+A project has separate environments (`development`, `staging`, `production`, previews). Each owns its database, users, keys,
+secrets, tables, policies, files, flows, agents and settings. A client points at the project's gateway and presents one
+environment's key. The gateway checks the key, origin, scopes, rate limit and quota, then hands the server the caller. The
+server runs the policy for that exact operation before touching data. Writes emit events, clear cached lists and broadcast
+changes; subscriptions turn events into background flows, jobs, webhooks and mail.
+
+The runtime is one Sillo application (it can run several worker processes) behind the gateway, on PostgreSQL. Studio is a
+browser interface that talks to its own `/studio` API. Do not assume separate services for auth, data, flows or realtime.
 
 ## Data and policy
 
-A **resource** exposes a database table through five independently configurable operations: list, get, create, update, and delete. Each operation can be disabled and has its own rule. Relations have their own target-resource read checks. A table's database schema and resource definition are related but distinct; after creating or changing a resource definition, migration may be required to change the physical table.
+A **table** in Pawabase is a definition over a Postgres table: fields, validation, relations, search fields, vectors, ownership,
+caching, events, realtime, and five operations (list, get, create, update, delete), each enabled separately with its own rule.
+The definition and the physical table are related but not the same: changing a definition can need a migration.
 
-Rules can inspect `$auth`, `$record`, `$input`, `$request`, `$credential`, `$object`, `$event`, and `$now`. A rule may mean anyone, signed-in users, owner, role, permission, scope, or a custom condition. Secret keys and Studio pass rules. Ordinary list requests may return only allowed rows; `total` can be `null` when a per-row rule makes a correct count unavailable. One-record reads may return `404` for either absent or hidden records. Write-only fields are omitted from responses.
+Rules can read `$auth`, `$record`, `$input`, `$request`, `$credential`, `$object`, `$event` and `$now`, or use shorthands
+(signed in, owner, role, permission, organization, team, two-step, scope). Secret keys and Studio pass every rule. Lists are
+filtered in the database, `total` can be `null` under row rules, a single-row `404` can mean hidden, and write-only fields never
+come back. Details in [auth and policies](auth-policies.md).
 
-## Identity and keys
+## Identity
 
-Every request needs `apikey`. A user request also carries `Authorization: Bearer <access token>`. A publishable key is meant for client apps and remains subject to policies. A secret key bypasses policies and can carry management scopes. A key belongs to one environment. Scopes restrict route families such as `data`, `storage`, `auth`, `flows`, `ai`, and `realtime`; management families require secret keys. User metadata is editable by the user and must not be used as authority for permissions.
+Every request needs `apikey`; a person's or machine's request adds `Authorization: Bearer <access token>`. Publishable keys
+are for apps and always obey policies. Secret keys bypass them and can carry management scopes. Machines (services, AI agents)
+have their own identities and roles. Organizations scope a session to one team at a time. `user_metadata` is editable by the
+user and is never authority.
 
-Authentication includes sessions, email/password, links and codes, social and company sign-in, MFA, passkeys, roles, organizations, machine identities, and token profiles. Availability and setup vary by deployment. For a specific flow, read `pawabase-docs/auth/` and inspect the installed SDK's auth methods.
+## Reliability
 
-## Reliability and deployment
+Events and their reactions are at least once and can arrive out of order: make handlers and webhook receivers idempotent.
+Realtime is live delivery, not storage; keep business state in records. Definitions promote between environments; rows, users,
+keys and secrets never do. Backups leave out file bytes and secret values.
 
-Events and reactions are at least once and can run independently or out of order. Make event handlers and webhook receivers idempotent. Realtime messages are for live delivery; store durable business state in records. Definitions can be copied or promoted between environments, while rows, users, keys, and secrets remain separate. Use backups and Activity/Observability when validating production changes.
-
-Read `pawabase-docs/concepts/how-pawabase-fits-together.mdx`, `database/how-data-works.mdx`, `policies/how-rules-work.mdx`, `reference/keys-and-security.mdx`, and `environments/overview.mdx` for the detailed model.
+Docs: `concepts/how-pawabase-fits-together.mdx`, `database/how-data-works.mdx`, `policies/how-rules-work.mdx`,
+`reference/keys-and-security.mdx`, `environments/overview.mdx`.

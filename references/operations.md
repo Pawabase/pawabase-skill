@@ -1,25 +1,55 @@
-# Environments, deployment, management, and diagnosis
+# Environments, management, and diagnosis
 
-An environment is a separate backend: database rows, users, resources, policies, keys, secrets, buckets/files, auth and mail settings, flows, agents, and activity. Development, staging, and production should use distinct credentials. Copy/promote moves definitions, not data, users, keys, or secrets. The key used by an SDK must belong to its configured environment.
+An environment is a whole backend: rows, users, tables, policies, keys, secrets, buckets and files, auth and mail settings,
+flows, agents and activity. Development, staging and production each have their own keys. Promotion moves definitions, never
+data, users, keys or secrets. A client's key must belong to the environment it names.
 
-## Build changes
+## Three ways to change a backend
 
-Studio is the browser control plane for resources, policies, auth, storage, realtime, logic, AI, mail, and Activity. For repeatable definitions, the docs' IaC workflow supports project configuration, tables, fields, relations, policies, buckets, flows, routes, webhooks, and deployment plans. A resource definition change may require a database migration. Inspect the plan and target environment, validate in development/staging, and confirm the physical schema before relying on the new API shape.
+| Way | Good for | Notes |
+| --- | --- | --- |
+| **Studio** | Exploring, designing tables and policies, reading Activity | Every change is audited; schema changes show a migration preview |
+| **Management clients** (secret key, server only) | Scripts, provisioning, CI checks | TypeScript `manage(client, env)` from `@pawabase/client/manage` and `admin(client, env)` from `@pawabase/client/admin`; Python `pb.manage.<area>` and `pb.admin.<area>`. `pb.manage.environment("staging")` re-binds to another environment the key may manage |
+| **`pawabase-iac`** | Definitions reviewed in git | Python declarations; `pawabase validate` (offline), `emulate`, `plan` (reads the real environment), `deploy` (writes). See [platform lifecycle](platform-lifecycle.md) |
 
-The product docs also describe management clients: `@pawabase/client/manage` and `pb.manage`. These are **not** present in the checked TypeScript 0.1.0 package exports or Python 0.2.0 wheel. Use them only after confirming a newer package exposes them; otherwise use verified management HTTP with an appropriately scoped secret key. A secret key can manage only its own environment. `/studio` needs a Cloud-signed Studio token and is not the ordinary app management endpoint.
+```python
+pb = Pawabase(url, os.environ["PAWABASE_SECRET_KEY"], environment="staging")
+pb.manage.secrets.set("STRIPE_KEY", os.environ["STRIPE_KEY"])
+failed = pb.manage.flows.runs(status="failed", limit=20)
+matches = pb.admin.users.search(search="ada@example.com")
+```
 
-Backups and restores affect durable state. Before a production schema change or restore, inspect the current backup/restore workflow and the target environment. Preview replay/redelivery/bulk actions when the endpoint supports dry run, and decide how duplicate side effects are handled. Avoid replaying successful events just to test an integration.
+Python `pb.manage` areas: `resources`, `schema`, `schemas`, `policies`, `routes`, `database`, `flows`, `schedules`,
+`subscriptions`, `events`, `webhooks`, `inbound_hooks`, `jobs`, `buckets`, `cache`, `mail`, `mail_templates`,
+`realtime_channels`, `dashboards`, `keys`, `secrets`, `domains`, `observability`, `alarms`, `status_page`, `health`, `ai`,
+`agents`, `agent_runs`, `knowledge_bases`, `connections`, `environments`, `versions`, `backups`. Check method names with
+`help()` or the TypeScript declarations before scripting.
+
+Rules for all three:
+
+- A changed table definition can need a migration. Read the preview SQL and its risk notes, apply in development first, then
+  check the real table and the API shape. A new required field on a table with rows goes nullable, backfill, then required.
+- Restores, key rotations, bulk replays and destructive migrations change durable state: look at the target environment and the
+  plan or backup first, save the current state, and say what will change.
+- Prefer dry runs where offered (promotion, replays). Never replay successful events to test an integration.
+- A secret key manages only its own environment (plus those it is explicitly allowed). `/studio` uses a Cloud-signed token and
+  is not an app management endpoint.
 
 ## Diagnose by layer
 
 | Symptom | Check |
 | --- | --- |
-| `401` | Key presence/validity, environment, allowed origin/IP, bearer token or session expiry |
-| `403` | Key scope, enabled operation, caller roles/org/assurance, specific policy |
-| `404` on one row | Resource/path/id, operation enablement, read rule hiding the row |
-| `409` or `422` | Unique/foreign-key constraint, field validation, schema migration |
+| `401` | Key present and valid, right environment, allowed origin or IP, token or session expiry |
+| `403` | Key scope, operation enabled, caller's roles, organization and two-step level, the specific policy, plan quota |
+| `404` on one row | Table, path and id, operation enabled, API version, a read rule hiding the row |
+| `409` / `422` | Unique or foreign-key constraint, field validation, a pending migration |
 | `429` | Key rate limit, environment quota, `Retry-After` |
-| Realtime refusal | Channel rule, subscribe/publish difference, token, presence/history settings |
+| Realtime refused | Channel rule (subscribe and publish are separate), token, presence and history settings |
 | Automation missing | Source event, subscription filter, flow run, job status, webhook delivery |
 
-Preserve request id from SDK/API errors and trace it through Studio → Activity/Observability. Check the exact failed operation as the intended user, then use a secret key only as a controlled comparison. For runtime contributors, use the server's `ARCHITECTURE.md`, feature inventory, route decorators, and tests rather than inferring internal service boundaries. Read `environments/overview.mdx`, `environments/promote.mdx`, `tools/iac/overview.mdx`, `activity/overview.mdx`, `backups/overview.mdx`, and `tools/management-client.mdx` in the docs repo.
+Keep the request id from the error and open it in Studio → Activity: the trace shows gateway, policy, database and background
+steps. Reproduce as the intended caller first; use a secret key only as a controlled comparison. For server internals, the
+runtime's `ARCHITECTURE.md`, route modules and tests are the source, not guesses about service boundaries.
+
+Docs: `environments/overview.mdx`, `environments/promote.mdx`, `tools/management-client.mdx`, `tools/admin-client.mdx`,
+`tools/iac/overview.mdx`, `activity/overview.mdx`, `backups/overview.mdx`.

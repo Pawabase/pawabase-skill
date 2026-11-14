@@ -9,10 +9,10 @@ Start with the exact project, environment, API version, request id, actor/key ty
 | `403` | Key scope, operation policy, user's roles/org/assurance, bucket/channel rule | Test same actor in API Explorer; policy debug trace |
 | `404` for one record | Resource/operation enabled, API version, id, read policy hiding row | Compare with trusted server key without exposing existence to user |
 | `409` | Unique key or concurrent write | Conflict code/details and current row |
-| `422` | Field validation, relation constraint, required field, function/flow input | Field issues and resource schema |
+| `422` | Field validation, relation constraint, required field, flow or route input | Field issues and resource schema |
 | `429` | Key rate limit, plan quota, per-route limit, `Retry-After` | Usage/plan and edge limit metrics |
 | Missing/short list | Per-row policy, query filter, page, `total: null`, search fields | Query as target user, then compare permitted row ids |
-| Slow list or search | Sort/filter index, data volume, search backend dialect, cache settings | Activity latency and query plan/index usage |
+| Slow list or search | Sort/filter index, data volume, search fields, cache settings | Activity latency and query plan/index usage |
 | Data changed outside API but no event/live update | Outside-change capture disabled, direct SQL path, listener rule | Resource behavior settings and event log |
 | Stale list after external SQL write | Pawabase cache not invalidated | Cache stats/invalidation or TTL |
 | File uploaded but cannot download | Read policy differs from upload, key encoding, bucket visibility | Object listing and storage access trace |

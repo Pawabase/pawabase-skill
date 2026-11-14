@@ -4,10 +4,10 @@ Pawabase participates in MCP in two directions. Keep them separate:
 
 | Direction | What it does | Where to configure |
 | --- | --- | --- |
-| **AI client → Pawabase** | Codex, Claude, Cursor, or another MCP client inspects and manages a Pawabase environment. | Pawabase's `/mcp/v1` endpoint or local `pawabase-server mcp`. |
+| **AI client → Pawabase** | Claude Code, Codex, Cursor, or another MCP client inspects and manages a Pawabase environment. | Pawabase's `/mcp/v1` endpoint or local `pawabase-server mcp`. |
 | **Pawabase agent → external MCP server** | A Pawabase agent uses an outside app's tools, such as GitHub, Linear, or a custom server. | Studio → AI → Connections → Any MCP server, then the agent's tool list. |
 
-The skill itself is instructions. Installing `$pawabase` does not create an MCP connection. MCP is optional for the skill's advice; use it when live project inspection or management is useful.
+The skill itself is instructions. Installing it does not create an MCP connection. MCP is optional for the skill's advice; use it when live project inspection or management is useful.
 
 ## When MCP is already connected
 
@@ -22,36 +22,45 @@ Create a **secret** environment key in Studio → AI → AI tools (or the enviro
 
 `ai-read` can inspect project definitions and activity without changing them. `ai-build` adds data and definition building but excludes users, keys, secrets, snapshots, and promotion. Exact tool visibility depends on key scopes and runtime version. The tool list can include resources/schema, records, policies, flows/jobs, storage, mail, webhooks, logs, AI models, and release/backup operations. Do not assume a static tool count.
 
-### Codex remote example
+### Client setup
 
-Put the key in `PAWABASE_MCP_KEY` in the environment that **launches Codex**. Add to `~/.codex/config.toml` or a trusted project `.codex/config.toml`:
+Keep the key in `PAWABASE_MCP_KEY` in the environment that launches the client (a desktop app may need it set where the app
+can read it). Every client needs the same three things: Streamable HTTP, the URL, and the key as an `apikey` header or a
+Bearer token. Do not send both for one key.
+
+**Claude Code**
+
+```bash
+claude mcp add --transport http pawabase https://YOUR-API/mcp/v1 --header "apikey: $PAWABASE_MCP_KEY"
+```
+
+The shell expands the variable, so the key is stored in Claude Code's MCP configuration: add it at user or local scope, not
+in a committed project `.mcp.json`. Check with `claude mcp list` and `/mcp`.
+
+**Codex** (`~/.codex/config.toml`, or a trusted project `.codex/config.toml`)
 
 ```toml
 [mcp_servers.pawabase]
 url = "https://YOUR-API/mcp/v1"
-env_http_headers = { apikey = "PAWABASE_MCP_KEY" }
-default_tools_approval_mode = "writes"
-startup_timeout_sec = 20
-tool_timeout_sec = 60
+env_http_headers = { apikey = "PAWABASE_MCP_KEY" }   # or: bearer_token_env_var = "PAWABASE_MCP_KEY"
 ```
 
-Pawabase also accepts `Authorization: Bearer pb_sk_...` on this endpoint, so Codex's `bearer_token_env_var = "PAWABASE_MCP_KEY"` is an alternative to `env_http_headers`. Do not set both for the same key. Run `codex mcp list`, inspect `/mcp` in the Codex TUI, then ask for a harmless read such as “List the tables in development.” If you launch Codex as a desktop app, ensure its process can read the environment variable. Codex's `writes` mode prompts for tools not annotated read-only; keep it enabled for production. See the [official Codex MCP configuration](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
+The key stays in the environment, not the file. Check with `codex mcp list` and `/mcp`.
 
-### Other clients
+**Cursor, VS Code and other `mcp.json` clients**
 
-Claude Code's documented remote form is:
-
-```bash
-claude mcp add --transport http pawabase \
-  'https://YOUR-API/mcp/v1' \
-  --header 'apikey: YOUR_SCOPED_SECRET_KEY'
+```json
+{ "mcpServers": { "pawabase": { "url": "https://YOUR-API/mcp/v1", "headers": { "apikey": "${env:PAWABASE_MCP_KEY}" } } } }
 ```
 
-This literal command may persist the key in local client configuration or shell history. Prefer the client's secure credential storage when available. Other clients need Streamable HTTP, the endpoint URL, and either `apikey` or Bearer authentication. If a hosted ChatGPT connector only offers OAuth, Pawabase's API-key endpoint cannot complete that OAuth flow by itself; use a supported API-key/custom-header connection or an approved credential proxy. Do not disable Pawabase authentication to make a connector work.
+Whatever the client, keep its approval prompt on for tools that are not read only, and always for production. Then ask for a
+harmless read: "List the tables in development." A hosted connector that only offers OAuth cannot use Pawabase's API-key
+endpoint on its own; use a client that supports custom headers or an approved credential proxy, never a weaker key or
+disabled authentication.
 
 ### Local stdio
 
-For a client on the same trusted host as the runtime, launch `pawabase-server mcp` over stdio. It reads normal `PAWABASE_*` runtime settings and needs database/secrets access. This path has installation authority, not an environment-scoped remote key. Use an absolute executable path, a trusted working directory, and no terminal allocation. The runtime's `docs/mcp.md` includes Codex, Claude Desktop, and Docker examples.
+For a client on the same trusted host as the runtime, launch `pawabase-server mcp` over stdio. It reads normal `PAWABASE_*` runtime settings and needs database/secrets access. This path has installation authority, not an environment-scoped remote key. Use an absolute executable path, a trusted working directory, and no terminal allocation. The runtime's `docs/mcp.md` has client and Docker examples.
 
 ## How tool calls behave
 

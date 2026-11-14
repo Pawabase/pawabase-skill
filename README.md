@@ -1,72 +1,114 @@
-# Pawabase for coding agents
+# Pawabase skill
 
 [![Check skill](https://github.com/Pawabase/pawabase-skill/actions/workflows/check.yml/badge.svg)](https://github.com/Pawabase/pawabase-skill/actions/workflows/check.yml)
 
-The official, open Pawabase skill. It teaches an AI coding agent how Pawabase fits together, when to use each SDK or HTTP endpoint, and how to verify the target environment before changing it. It includes TypeScript, Python, auth, data, policies, storage, realtime, flows, automation, AI, Cloud, and operations.
+The official Pawabase skill for AI coding agents. It teaches an agent how Pawabase fits together, which client or endpoint to
+reach for, how to keep keys and access rules right, and how to prove a change works on the actual environment before calling it
+done. It works with any agent that reads skills: Claude Code, Codex, Cursor and others.
 
-**The skill and MCP are complementary.** The skill provides instructions and version-aware guidance. Pawabase's optional MCP server gives an AI client live, scoped access to one environment. Installing the skill alone does not connect to a project.
+It covers the TypeScript client (`@pawabase/client` 0.7), the Python client (`pawabase` 0.9), raw HTTP, auth and organizations,
+access policies, data, storage, realtime and live queries, flows and routes, mail, AI models, agents and knowledge, environments,
+releases, backups, and connecting AI tools over MCP.
 
-## 1. Install the skill
+## Use it without installing
 
-For Codex, clone into the user skills directory documented by [OpenAI](https://learn.chatgpt.com/docs/build-skills):
+The whole skill is also published as one file at **https://pawabase.com/SKILL.md**. Give your agent this prompt:
+
+> Read https://pawabase.com/SKILL.md and follow it to add Pawabase as the backend for this project.
+
+## Install
+
+The skill is a folder: [`SKILL.md`](SKILL.md) is the entry point, and it loads the short [references](references) it needs.
+
+**Claude Code**
 
 ```bash
-mkdir -p ~/.agents/skills
+git clone https://github.com/Pawabase/pawabase-skill.git ~/.claude/skills/pawabase
+```
+
+For one repository only, clone it into `.claude/skills/pawabase` in that repository.
+
+**Codex**
+
+```bash
 git clone https://github.com/Pawabase/pawabase-skill.git ~/.agents/skills/pawabase
 ```
 
-Start a new Codex session and ask: **“Use `$pawabase` to help me build a signed-in Pawabase app.”** Codex can also select it automatically for Pawabase tasks. For a repository-only installation, place the same folder under `.agents/skills/pawabase` in your project. If an existing skill with the same name is already installed, update that copy instead of keeping two copies.
+For one repository only, use `.agents/skills/pawabase` in that repository.
 
-The entrypoint is [SKILL.md](SKILL.md). It routes to short, focused references; the [scenario map](references/scenario-map.md) handles common tasks, and the [docs catalog](references/docs-catalog.md) locates all 244 pages in the checked Pawabase docs revision.
+**Other agents**
 
-## 2. Optionally connect Pawabase MCP
+Clone the folder wherever your agent loads skills or instructions from, and point it at `SKILL.md`. Nothing in the skill depends
+on a particular agent.
 
-Use MCP when you want your AI client to inspect a real project, read logs, review definitions, or build resources. This connects **your AI client to Pawabase**. A Pawabase agent calling an outside MCP server is a different setup, covered in the [MCP guide](references/mcp.md).
+Then start a new session and ask for something real, for example: *"Use the Pawabase skill to add sign-in and a tasks list to
+this app."* Agents also pick the skill up on their own for Pawabase work. Keep one copy installed; to update, `git pull` in the
+folder.
 
-1. In Pawabase Studio, choose the intended environment and open **AI → AI tools**. Create a secret key with **Look only** (`ai-read`) for inspection, or **Build with me** (`ai-build`) for development changes. Copy it once into your local secret store. A publishable `pb_pk_` key will not work for management MCP.
-2. Put the secret key in `PAWABASE_MCP_KEY` in the environment that launches Codex. Do not commit it or paste it into this repository.
-3. Add this to `~/.codex/config.toml`, replacing the URL with your project gateway URL:
+## Connect an environment (optional)
 
-   ```toml
-   [mcp_servers.pawabase]
-   url = "https://YOUR-API/mcp/v1"
-   env_http_headers = { apikey = "PAWABASE_MCP_KEY" }
-   default_tools_approval_mode = "writes"
-   startup_timeout_sec = 20
-   tool_timeout_sec = 60
-   ```
+The skill on its own gives guidance. To let your agent look at and work on a real environment, connect it to Pawabase's MCP
+server as well. The two work together: the skill decides what should happen, MCP lets the agent check and do it.
 
-4. Run `codex mcp list`, inspect `/mcp` in the Codex terminal UI, then ask: **“Using Pawabase MCP, list the tables in development.”** The key is tied to its environment. Use a separate read-only key for production.
+1. In Studio, open the environment you want, then **AI → AI tools**, and create a secret key with the scope you need:
+   **Look only** (`ai-read`) to inspect, **Build with me** (`ai-build`) to make development changes. It is shown once.
+2. Keep it in your shell or secret manager as `PAWABASE_MCP_KEY`. Never commit it, and never use a publishable `pb_pk_` key here.
+3. Add the server to your agent, using your project's API address:
 
-Pawabase serves stateless Streamable HTTP at **`POST /mcp/v1`**. It accepts the `apikey` header or a Bearer secret key. It does not offer the older HTTP+SSE MCP transport; `GET /mcp/v1` returning `405` is expected. Remote clients need an HTTPS gateway. See [Pawabase MCP setup and troubleshooting](references/mcp.md), [Pawabase's runtime MCP guide](https://github.com/Pawabase/pawabase/blob/main/docs/mcp.md), and the [official Codex MCP configuration](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
-
-### Other AI clients
-
-Claude Code, Cursor, and other Streamable HTTP clients use the same `/mcp/v1` URL with a scoped secret key in an `apikey` header or Bearer authentication. The [MCP guide](references/mcp.md) includes a Claude Code example, local `pawabase-server mcp` stdio setup, protocol checks, and common failures. A hosted ChatGPT connection depends on the workspace's supported authentication method; an OAuth-only connector cannot authenticate directly to Pawabase's API-key MCP endpoint.
-
-### Pawabase agents using outside tools
-
-To let a **Pawabase agent** call GitHub, Linear, or another service, open **AI → Connections → Add a connection → Any MCP server**, enter the external server's HTTPS URL and credential, choose **Check**, then add that connection to the agent and limit its tools. This is outbound from Pawabase and does not use your `/mcp/v1` management key. See [outbound MCP](references/mcp.md).
-
-## What the skill covers
-
-| Area | Guidance |
-| --- | --- |
-| Build an app | JS/TS and Python clients, raw HTTP, generated types, auth sessions, SSR, records, files, live updates |
-| Secure it | Publishable versus secret keys, per-operation policies, organizations, machine identities, channel and bucket rules |
-| Add behavior | Flows, custom routes, events, schedules, webhooks, jobs, mail, agents and vector search |
-| Ship and operate | Environments, IaC, migrations, API versions, previews, backups, logs, incidents and quotas |
-| Connect AI | Inbound Pawabase MCP, outbound agent MCP, tool scopes, approvals, audit, transport troubleshooting |
-
-The skill checks versions because the checked `@pawabase/client` 0.1.0 and Python `pawabase` 0.2.0 packages expose less than some newer product documentation. It does not invent SDK methods to fill that gap. See the [source and compatibility map](references/source-map.md) and [capability boundaries](references/capability-boundaries.md).
-
-## Maintain the skill
-
-From this repository, with a sibling checkout of `Pawabase/pawabase-docs`:
+**Claude Code**
 
 ```bash
-python3 scripts/check_skill.py --docs ../pawabase-docs
-python3 scripts/build_catalog.py --docs ../pawabase-docs --check
+claude mcp add --transport http pawabase https://YOUR-API/mcp/v1 --header "apikey: $PAWABASE_MCP_KEY"
 ```
 
-To refresh the docs catalog after docs changes, run `python3 scripts/build_catalog.py --docs ../pawabase-docs` and review the diff. CI checks links and the catalog against the pinned docs revision. The skill-creator validator can check the `SKILL.md` manifest separately. Keep the [source map](references/source-map.md) current when SDKs or runtime behavior change.
+**Codex** (`~/.codex/config.toml`)
+
+```toml
+[mcp_servers.pawabase]
+url = "https://YOUR-API/mcp/v1"
+env_http_headers = { apikey = "PAWABASE_MCP_KEY" }
+```
+
+**Cursor and other clients** (`mcp.json`)
+
+```json
+{ "mcpServers": { "pawabase": { "url": "https://YOUR-API/mcp/v1", "headers": { "apikey": "${env:PAWABASE_MCP_KEY}" } } } }
+```
+
+4. Ask: *"Using Pawabase MCP, list the tables in this environment."*
+
+A key belongs to one environment. Use a separate, read-only key for production. Pawabase serves stateless Streamable HTTP at
+`POST /mcp/v1` and accepts the key as an `apikey` header or a Bearer token; `GET /mcp/v1` answering `405` is expected. The
+[MCP reference](references/mcp.md) covers scopes, confirmations, local stdio, and troubleshooting.
+
+Letting a **Pawabase agent** call outside tools (GitHub, Linear, any MCP server) is the other direction, set up in Studio under
+**AI → Connections**. It is covered in the same reference.
+
+## What the skill does
+
+| Area | What the agent learns |
+| --- | --- |
+| Build | Clients for TypeScript and Python, raw HTTP, generated types, sessions and SSR, records and relations, files and image sizes, live queries and channels |
+| Secure | Publishable, secret and machine keys; per-action policies; organizations, roles and company sign-in; bot protection; user API keys |
+| Automate | Flows, custom routes, events, schedules, webhooks in and out, background jobs, mail |
+| AI | The model gateway, embeddings and vector search, agents with approvals, knowledge bases, MCP in both directions |
+| Ship and operate | Environments, reviewed promotion, API versions, previews, backups and restores, activity, traces, alarms, quotas |
+
+It works from the installed package and the target environment's own OpenAPI, not from memory: before it uses a method it checks
+that the installed version has it, and it says so when a feature needs a newer package or a raw request. See the
+[source map](references/source-map.md) and [capability boundaries](references/capability-boundaries.md).
+
+## Maintain
+
+With [`Pawabase/pawabase-docs`](https://github.com/Pawabase/pawabase-docs) checked out beside this repository:
+
+```bash
+python3 scripts/check_skill.py --docs ../pawabase-docs        # links, docs pages, formatting
+python3 scripts/build_catalog.py --docs ../pawabase-docs --check
+python3 scripts/build_catalog.py --docs ../pawabase-docs      # refresh the docs catalog after docs change
+python3 scripts/build_bundle.py --out ../pawabase-website/public/SKILL.md   # rebuild pawabase.com/SKILL.md
+```
+
+CI runs both checks against the docs revision pinned in [`.github/workflows/check.yml`](.github/workflows/check.yml). When an
+SDK or the server changes, update the [source map](references/source-map.md) and the client references with what was verified,
+and move the pin.

@@ -1,23 +1,83 @@
 # Authentication, keys, and access rules
 
-## Request identity
+## Who is calling
 
-Every request supplies `apikey`. A signed-in user also supplies `Authorization: Bearer <access_token>`. The gateway validates key ownership, expiration, allowed origins/IPs/routes, scopes, rate limits, and quotas. The server then resolves the user, roles, organization, assurance level, and policy facts. A publishable `pb_pk_` key can live in a browser or mobile app; it is subject to access rules. A `pb_sk_` secret key bypasses rules and may carry management scopes. Never put one in a client bundle. Each key belongs to one environment.
+Every request carries `apikey`. A signed-in caller also carries `Authorization: Bearer <access token>`. The gateway checks the key
+(environment, expiry, allowed origins, IPs and routes, scopes, rate limit, quota); the server then resolves the caller and runs the
+policy for the exact operation.
 
-Scopes use `family:read`, `family:write`, or `family:*` (and `*` for all). Application families include `data`, `storage`, `auth`, `flows`, `ai`, and `realtime`. Management families such as `resources`, `users`, `keys`, `secrets`, `backups`, and `monitoring` require secret keys. No scopes means the key is not narrowed by scope; rules and key type still matter. Read `reference/keys-and-security.mdx` in the docs repo for the full scope map.
+| Credential | Lives in | Policies | Use for |
+| --- | --- | --- | --- |
+| Publishable `pb_pk_` | Browser, mobile, desktop | Always apply | Every app a person uses |
+| A person's access token | The client's session store | Apply as that person | Signed-in calls; servers forward it with `asUser` / `as_user` |
+| Secret `pb_sk_` | Server environment variables | **Bypassed** | Administration, `manage`, `admin`, MCP. Never in a bundle |
+| Machine identity (`pbm_` client id and secret) | A service's secret store | Apply as the machine | Workers, integrations, AI agents: `asMachine` / `as_machine` |
+| User API key | Issued by a person | Apply as that person | Scripts a person runs; ends with their access |
 
-## Sessions and sign-in
+Scopes narrow a key: `family:read`, `family:write`, `family:*`, or `*`. App families: `data`, `storage`, `auth`, `flows`, `ai`,
+`realtime`. Management families (`resources`, `users`, `keys`, `secrets`, `backups`, `monitoring`…) need a secret key. A key
+with no scopes is not narrowed; rules and key type still apply. Full map: `reference/keys-and-security.mdx`.
 
-Auth can support email/password, links/codes, social/company login, passkeys, MFA, sessions, devices, guest users, roles, organizations, invitations, and machine identities. Their availability depends on environment configuration and client version. In the verified TypeScript 0.1.0 client, `auth.signInWithPassword` may return `mfa_required`; complete that branch before calling protected resources. The client refreshes and persists sessions; for SSR use `asUser(token)` per incoming request. Refresh tokens rotate, so avoid parallel refresh attempts and never log them.
+## Sign-in
 
-Token profiles issue separate tokens for other services; they do not replace the Pawabase session. A receiver validates the profile token's signature, audience, issuer, and expiry against the environment JWKS. User metadata is editable by the user: use server-controlled roles or app metadata for authority.
+The clients cover password, sign-in links, email codes, social sign-in, passkeys, two-step verification and recovery codes,
+guests, sessions and devices, organizations, company sign-in (SSO) and token profiles. What is switched on is per environment.
 
-For guest users, upgrade the existing guest identity when they register so guest-owned rows remain attached. For organizations, check that an active organization is selected before using `$auth.org` in a rule; a signed-in user can still have no active organization. A user API key acts as that person and ends with their authority, while a machine identity acts as itself and has its own roles. OAuth, password reset, invitations, and verification links need environment-specific redirect allowlists. See `auth/guests.mdx`, `auth/organizations.mdx`, `auth/machines.mdx`, and `auth/redirect-urls.mdx`.
+```ts
+const result = await pawabase.auth.signInWithPassword({ email, password });
+if (result.status === "mfa_required") {
+  await result.verify(await askForCode(result.factors));   // the session exists only after this
+}
+```
 
-## Policy evaluation
+- **Browsers.** The client stores and refreshes the session; `onAuthStateChange` drives the UI. OAuth, SSO, password reset,
+  invitations and verification links need the redirect URL on the environment's allowlist (`auth/redirect-urls.mdx`).
+- **Servers and SSR.** Read the person's token from the request and use `asUser(token)` per request. Never share one signed-in
+  client between requests. Refresh tokens rotate: refresh in one place, never log tokens.
+- **Guests.** `signInAnonymously`, then `upgradeAnonymous` when they register, so their rows stay theirs.
+- **Company sign-in.** `findSSO({ email })` tells you whether the email's domain belongs to an organization with a connection;
+  `signInWithSSO({ email })` redirects in a browser. A required-SSO organization refuses password sign-in for its members.
+- **Token profiles** issue separate tokens for other services. The receiver checks signature, audience, issuer and expiry
+  against the environment's JWKS. They do not replace the Pawabase session.
+- `user_metadata` is editable by the user. Never base access on it; use roles, permissions or app metadata.
 
-Access rules are attached to individual resource operations, bucket actions, flows, routes, channels, agents, and models. Rules can inspect `$auth`, `$record`, `$input`, `$request`, `$credential`, `$object`, `$event`, and `$now`. Common policies include public, authenticated, record owner, role/permission, organization, scope, and custom conditions. A secret key always passes policy, which makes it a poor credential for testing user access.
+## Organizations
 
-For list operations, a rule can constrain rows in the query; the result may be empty and `total` may be unknown. A get can return `404` whether the record is absent or hidden. Create/update/delete each have separate policy checks. An update rule that depends on a field such as `owner_id` protects that field from a user changing it to escape the rule. Relations and realtime record changes apply their own read rules.
+A person can belong to many organizations; a session is in at most one at a time. Choose it at sign-in (`org`) or later with
+`auth.switchOrg(slug)`. The session then carries the organization, the person's role, its permissions and their teams
+(`$auth.org`, `$auth.org_role`, `$auth.org_permissions`, `$auth.org_teams`). `auth.orgs` covers members, invitations, teams,
+custom roles, verified domains (auto-join or suggest), required two-step verification, transfer and the audit log.
 
-When implementing a feature, define the actual actor and expected operations, configure rules server side, then exercise anonymous, owner, other-user, and server credentials. A hidden UI control is not authorization. For details read the docs repo's `auth/how-auth-works.mdx`, `auth/sessions.mdx`, `policies/how-rules-work.mdx`, `policies/how-rules-are-evaluated.mdx`, and `policies/testing.mdx`.
+A signed-in person can have **no** active organization. Rules that use organization checks fail closed for them; send them to an
+organization picker rather than showing an empty app.
+
+## Policies
+
+Every operation has its own rule: each table's list, get, create, update and delete; each bucket action; flows, routes,
+channels, agents and models. Prefer the shorthands to hand-written conditions:
+
+| JSON | Passes when |
+| --- | --- |
+| `{"authenticated": true}` | Signed in |
+| `{"owner": "owner_id"}` | Signed in and the column equals the caller's id |
+| `{"role": ["admin"]}` / `{"permission": ["posts:write"]}` | Any of the roles / all of the permissions |
+| `{"org": "org_id"}` | In an organization and the row's column holds its id. On lists this becomes a database filter |
+| `{"org_role": ["admin"]}` / `{"org_permission": "invoices.write"}` / `{"team": ["finance"]}` | The caller's role, permission or team in the current organization |
+| `{"aal": "aal2"}` | The session completed two-step verification |
+| `{"scope": "resource:write"}` / `{"kind": "user"}` / `{"service": true}` | Key scope / caller kind / a secret key or Studio |
+
+Custom conditions can read `$auth`, `$record`, `$input`, `$request`, `$credential`, `$object`, `$event` and `$now`; tell a
+machine from a person with `$auth.actor_type == "machine"`. See `policies/shorthands.mdx` and `policies/context.mdx`.
+
+How results look under rules:
+
+- Lists are filtered in the database: pages can be short and `total` can be `null`. A single-row `404` can mean "not yours".
+- Create, update and delete are checked separately. An update rule on `owner_id` also stops a person moving a row out of
+  their reach. Expanded relations and realtime record changes apply the related table's read rule.
+- A secret key passes every rule, so it proves nothing about user access.
+
+## Prove the rules
+
+For each operation, decide the actor and the expected answer, then make real requests as: anonymous, the owner, another user,
+another organization's member, and a machine if one is involved. A hidden button is not authorization. Studio's policy
+debugger shows why a request was allowed or refused (`policies/debugging.mdx`, `policies/testing.mdx`).

@@ -1,34 +1,92 @@
 # Realtime
 
-Realtime channels use names such as `chat:lobby`, `order:42`, or `resource:tasks`. A Studio channel rule matches the name and separately controls subscribe, publish, presence, history, and limits. Authentication uses the environment key and, when applicable, the user's access token. A private channel's history is not public just because a URL exists.
+Three tools, for three jobs:
 
-## Verified TypeScript 0.1.0
+| You want | Use | Truth lives in |
+| --- | --- | --- |
+| A list on screen that stays current (tasks, orders, a feed) | A **live query** | The table: the server re-sends the whole filtered result |
+| To react to individual row changes (a toast, a counter, a sync job) | **Record changes** on `resource:<table>` | The table: events are signals, refetch when unsure |
+| Messages between people or devices (chat, typing, cursors, who is online) | **Channels** with presence and history | The channel backlog, or records if messages must last |
+
+Channels have names like `chat:lobby`, `order:42` or `resource:tasks`. A channel rule in Studio matches the name and separately
+decides subscribe, publish, presence, history and limits. The connection carries the environment key and, when signed in, the
+person's access token; rules see who they are.
+
+## Live queries
 
 ```ts
-const room = pb.realtime.channel<{ text: string }>("chat:lobby", {
-  presence: { name: "Ada" }, replay: 50,
-});
-const stop = room.onEvent("message", ({ payload, from }) => render(from, payload.text));
+const open = pawabase.realtime.live<Task>("tasks", { filter: { done: "is.false" }, sort: "-created_at", limit: 20 });
+open.onChange(({ data, total }) => render(data));
+await open.ready();          // the first result
+open.stop();                 // when the view goes away
+```
+
+```python
+async with pb.realtime.live("tasks", filter={"done": "is.false"}, sort="-created_at", limit=20) as live:
+    async for result in live:
+        render(result["data"])
+```
+
+- The table needs **Broadcast changes** on. Filters, `sort`, `select`, `q` (search) and the list policy are the same as
+  `GET /rest/v1/<table>`, so each person only receives rows they may read; `total` is `null` when a row policy makes the count
+  unreliable.
+- `filter` is sent as written: `{ status: "eq.paid" }`. Booleans and nulls go through `is` (`is.false`, `is.null`).
+- `limit` is 1 to 200. Each live query costs the server a re-run on every change to the table; keep them per view, not per row.
+- It reopens by itself after a reconnect and delivers a fresh result, so there is no gap to patch.
+- Python: `AsyncPawabase` and `pip install "pawabase[realtime]"`.
+
+## Record changes
+
+With **Broadcast changes** on, subscribe to `resource:<table>` for `created`, `updated` and `deleted` events carrying
+`payload.record`. The table's read rule decides who receives each change. Apps cannot publish to `resource:` channels. Changes
+made outside the API (direct SQL) need the separate change-capture setting.
+
+To avoid a gap on first load: subscribe, then read the list. Merge events by record id. After a reconnect, refetch when history
+may not cover the time you were away. If you are doing this for a list on screen, a live query is simpler.
+
+## Channels
+
+```ts
+const room = pawabase.realtime.channel<{ text: string }>("chat:lobby", { presence: { name: "Ada" }, replay: 50 });
+const stop = room.onEvent("message", ({ payload, from }) => show(from, payload.text));
+room.on("presence", ({ members }) => showRoster(members));   // joins and leaves too
 await room.subscribe();
 await room.send("message", { text: "hello" });
-await room.track({ name: "Ada" });
 const recent = await room.history(50);
 stop();
 await room.unsubscribe();
 ```
 
-The client opens a WebSocket on first subscription, heartbeats, reconnects with backoff, rejoins channels, and replays bounded history when requested. It updates an open socket after token refresh. `on("message")` gets every channel message, while `onEvent(name)` filters the event. The sender also receives its message; render delivered messages and deduplicate by id. Check `realtime.status` and `onStatusChange` to show reconnect state. The verified 0.1.0 SDK also has HTTP `publish`, `presence`, and `history` methods, but no `stream`/SSE method; raw SSE may be used against a verified deployment. On older Node without global WebSocket, inject one in realtime options.
+```python
+room = pb.realtime.channel("chat:lobby", presence={"name": "Ada"}, replay=50)   # AsyncPawabase
+room.on("message", lambda message: show(message))
+await room.subscribe()
+await room.send("message", {"text": "hello"})
+```
 
-## Wire and other languages
+- The client opens one WebSocket on the first subscription, heartbeats, reconnects with backoff, rejoins channels, and with
+  `replay` fetches the messages missed while away. It swaps in a refreshed token without reconnecting.
+- `on("message")` gets every message; `onEvent(name)` filters by event. Other channel events: `presence`, `subscribed`,
+  `closed`, `error`. The sender also receives its own message: render delivered messages and deduplicate by id.
+- Show connection state from `realtime.status` / `onStatusChange`. On old Node without a global `WebSocket`, pass one in the
+  `realtime` options.
+- Presence metadata is visible to everyone on the channel: no secrets in it.
+- **Ephemeral** channels keep nothing for a disconnected client; history depth keeps a bounded backlog; **durable** channels
+  keep messages until retention. Messages that must stay (a chat log) belong in a table as well.
+- For typing indicators and cursors, send ephemeral events; never write every movement to a table.
 
-The public OpenAPI snapshot includes `POST /realtime/v1/publish`, `GET /realtime/v1/channels/{channel}/history`, `GET /realtime/v1/channels/{channel}/presence`, and `GET /realtime/v1/sse`. WebSocket is the full duplex protocol; SSE is listen only and publishing remains an HTTP call. The docs list MQTT, MQTT over WebSocket, HTTP streaming, and long polling as unavailable. Inspect target OpenAPI and realtime connection docs for precise parameters, frame shapes, and limits. The verified Python 0.2.0 wheel has no realtime namespace; use a compatible newer client or the wire protocol.
+## Without a socket
 
-## Live records, presence, and history
+Publishing, presence and history work over HTTP from any server: `realtime.publish(channel, event, payload)`,
+`realtime.presence(channel)`, `realtime.history(channel, limit)` (TypeScript and Python). To listen without a socket, SSE:
+`realtime.stream(channels)` in TypeScript, `realtime.sse(channels)` in Python, at most 20 channels, listen only.
 
-Enable a resource's **Broadcast changes** setting, then subscribe to `resource:<table>` for `created`, `updated`, and `deleted` events containing `payload.record`. Changes made outside the API need the separate capture setting. Row read rules decide who receives each change; apps cannot publish to `resource:` channels. A presence-enabled rule exposes members and join/leave changes; presence metadata should not contain secrets.
+The wire: `POST /realtime/v1/publish`, `GET /realtime/v1/channels/{channel}/history`,
+`GET /realtime/v1/channels/{channel}/presence`, `GET /realtime/v1/sse`, and the WebSocket protocol in
+`realtime/connection.mdx`. There is no MQTT, HTTP streaming or long polling.
 
-Ephemeral channels do not preserve disconnected messages. History depth holds a bounded backlog; durable channels store messages until retention expires. Replay is bounded by that backlog. For chat, subscribe, load history, deduplicate by id, and keep durable messages as records if they must remain available. For a live list, merge by record id and reload records after a possible gap. Use Studio's Realtime Playground, Connections, and Activity to diagnose key, rule, connection, and history failures.
+## When it does not arrive
 
-Current docs also describe **live queries** that rerun a filtered result when records change. The checked TypeScript 0.1.0 and Python 0.2.0 packages do not expose the documented live-query method. Before choosing it, verify both target deployment and installed SDK; otherwise use record-change subscriptions plus a refetch. For listen-only dashboards, use SSE where the target supports it. For collaborative cursors or typing, use ephemeral channel events/presence and avoid writing every movement to a durable table. See `realtime/record-changes.mdx` and `realtime/patterns.mdx`.
-
-For the first live-list load, avoid a read/subscribe gap: subscribe before trusting the initial list, then read or refetch immediately after subscribing. On reconnect, deduplicate by id and refetch when history may not cover the disconnection. A live query, when supported, handles this differently by returning the whole filtered result again; check its `limit` and per-client resource cost.
+Studio → Realtime has a playground, live connections and history; Activity shows refused joins. Check in order: the channel
+rule (subscribe and publish are separate), the key's environment, the token, **Broadcast changes** on the table, and the
+table's read rule for the receiving person. See `realtime/record-changes.mdx` and `realtime/patterns.mdx`.

@@ -1,28 +1,32 @@
-# Capability boundaries and compatibility
+# Capability boundaries
 
-Use this when an example seems to contradict the installed package or the user asks whether a feature is available. These boundaries come from the checked runtime feature inventory and SDK exports; verify against the target deployment before treating them as timeless product limits.
+Use this when an example seems to contradict the installed package, or the user asks whether something is possible at all. The
+rows come from the runtime's feature inventory (**Explicit boundaries and non-features**) and the checked client sources in the
+[source map](source-map.md). Confirm on the target environment before treating a row as permanent.
 
-| Area | Checked boundary | Practical response |
+| Area | Boundary | What to do instead |
 | --- | --- | --- |
-| Python functions | Python `pawabase` 0.2.0 has a function kit, while the current runtime inventory says functions are not a current product area. | Prefer flows, routes, jobs, or mounted code for a new current project. Use the kit only when its route/CLI is confirmed on the target deployment. |
-| Python client | The checked 0.2.0 wheel has flat methods, not the docs' `pb.auth`, `pb.from_`, `pb.realtime`, `pb.storage`, `pb.ai`, or `pb.manage`. | Inspect the installed package; use newer compatible package or verified HTTP. |
-| TypeScript client | Checked 0.1.0 has no `pb.ai`, `pb.manage`, `realtime.stream`, or `liveQuery` export. | Inspect installed declarations; use supported HTTP/protocol calls where needed. |
-| IaC | `pawabase-iac` is a separate distribution; both it and the function kit document a `pawabase` command. | Inspect package/entrypoint and help before running `init`, `emulate`, `plan`, or `deploy`. |
-| Realtime | SSE is subscribe-only; MQTT, MQTT over WebSocket, HTTP streaming, and long polling are not live in checked docs. Only durable channel kind changes persistence behavior. | Use WebSocket for interactive presence/publish and HTTP for publishing. |
-| Pawabase MCP | `/mcp/v1` is stateless JSON-RPC over Streamable HTTP POST; no MCP SSE stream or session endpoints. Remote access needs a scoped secret key; local stdio has installation authority. | Configure an MCP client's HTTP transport, or explicitly launch `pawabase-server mcp` on a trusted host. |
-| Search | PostgreSQL uses ranked full-text search; SQLite/MySQL use case-insensitive substring matching. No typo tolerance, highlights, or external search engine in the checked runtime. | Choose query and UI behavior for the actual database dialect. |
-| Backups | Environment backups exclude stored object bytes, secret values, raw API keys, sessions, logs, and jobs. | Back up object storage separately and re-provision secrets/keys after restore. |
-| Data cache | API writes invalidate a table's response cache; external SQL writes do not. | Invalidate or disable cache when another writer changes the table. |
-| SQL | Studio write SQL needs explicit opt-in; the flow SQL query block is read-only. | Use resource blocks or a transaction block for flow writes. |
-| Domains | Pawabase verifies/routes custom domains but does not act as a general certificate authority. | Provide TLS/proxy support in the deployment. |
-| Dashboards | Public dashboards still observe resource policies. | Test with anonymous and real users. |
-| Cloud vs server | Cloud accounts, organization billing, and plan administration are outside the core self-hosted runtime. | Route Cloud questions to Cloud docs and account controls, not server management endpoints. |
+| Functions | Pawabase does not run uploaded functions; the old function kits are gone. | Flows, custom routes, events, schedules and jobs. Code that must run elsewhere is your own service calling the API with a machine identity. |
+| Database | Pawabase runs on PostgreSQL only. | Do not plan for MySQL or SQLite. Use Postgres features (full-text search, `pgvector` fields) freely. |
+| Search | Ranked Postgres full-text search on a table's search fields. No typo tolerance, highlight snippets or external search engine. | Design the UI for exact-word matching; use `similar` on a vector field for meaning-based search. |
+| Clients | Older packages (`@pawabase/client` below 0.7, Python `pawabase` below 0.9) lack live queries, AI agents and knowledge, captcha, machine identities and, in Python, most namespaces. | Upgrade the package. If you cannot, make a raw request to an endpoint you confirmed in the environment's OpenAPI. |
+| Python realtime | Channels and live queries need `AsyncPawabase` and `pawabase[realtime]`. The sync client has `publish`, `history`, `presence` and `sse`. | Use the async client in workers and servers that listen. |
+| Realtime transports | WebSocket for everything; SSE is listen only. No MQTT, MQTT over WebSocket, HTTP streaming or long polling. Only the **durable** channel kind changes persistence. | Publish over HTTP or the socket; store messages that must survive as records. |
+| Live queries | One result of up to 200 rows, re-sent whole on change; needs **Broadcast changes** on the table. | For larger sets, subscribe to `resource:<table>` changes and refetch the visible page. |
+| Batch writes | `createMany` / `create_many` are not atomic. | A flow with a transaction block, or a custom route. |
+| Pawabase MCP | `/mcp/v1` is stateless JSON-RPC over Streamable HTTP `POST`; no SSE stream or sessions. Remote use needs a scoped secret key; local stdio runs with installation authority. | Use an HTTP MCP transport, or launch `pawabase-server mcp` yourself on a trusted host. |
+| Backups | Environment backups leave out stored file bytes, secret values, raw API keys, sessions, logs and jobs. | Back up object storage separately; re-create secrets and keys after a restore. |
+| Data cache | API writes clear a table's response cache; writes made directly in SQL do not. | Clear or turn off the cache when another writer changes the table. |
+| SQL | Studio SQL writes need an explicit opt-in; the flow SQL block is read only. | Resource blocks or a transaction block for writes in flows. |
+| Domains | Pawabase verifies and routes custom domains; it is not a certificate authority. | Terminate TLS at your proxy or platform. |
+| Dashboards | Public dashboards still go through resource policies. | Test as an anonymous visitor and as a real user. |
+| Cloud | Accounts, billing and plans are Pawabase Cloud, not the self-hosted runtime. | Answer from Cloud docs and the Cloud dashboard, not server management endpoints. |
 
-## Decide whether a path is safe to recommend
+## Before recommending a path
 
-1. Verify the feature exists in the target environment or its generated OpenAPI, not only in a documentation page.
-2. Verify the installed SDK exports the method. If it does not, use a raw HTTP request only after the target endpoint and auth scheme are confirmed.
-3. Check whether the feature is deployment-specific, legacy, preview, or Cloud-only. State the distinction in the answer.
-4. For migrations, bulk replay, restore, and other state-changing operations, inspect the preview/plan and actual target before executing.
+1. Confirm the feature in the target environment or its OpenAPI, not only on a docs page.
+2. Confirm the installed package has the method. If not, use a raw request only once the endpoint and auth are confirmed.
+3. Say whether it is self-hosted or Cloud, preview or stable, and which version you checked.
+4. For migrations, bulk replays, restores and key rotations, inspect the plan or backup and the actual target first.
 
-The source for this boundary list is `PAWABASE_FEATURE_INVENTORY.md`, section **Explicit boundaries and non-features**, in the runtime repository. Recheck that section when the runtime changes.
+Recheck this list when the runtime's feature inventory or a client major version changes.

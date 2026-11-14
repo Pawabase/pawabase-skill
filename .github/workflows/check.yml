@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: Pawabase/pawabase-docs
-          ref: 27c168aa616e60bdfd3e789bb51ef7866c276097
+          ref: e446b6acb6b2c36568d8a36ef0e7cb768709267f
           path: pawabase-docs
       - uses: actions/setup-python@v5
         with:

@@ -8,7 +8,7 @@ Each environment has its own database rows, users, file objects, definitions, ke
 
 ## Define and change a backend
 
-Use Studio for interactive changes, or the separate `pawabase-iac` package for versioned definitions. The documented IaC workflow is `pawabase validate` (offline), `pawabase emulate` (simulated), `pawabase plan` (reads real environment), then `pawabase deploy` (writes). `merge` mode preserves unmanaged definitions; `override` can remove definitions absent from code. IaC does not yet manage all environment-level settings such as auth providers, API keys, domains, alarms, and backup schedules. Its CLI name overlaps with the older `pawabase` Python function kit: check the installed command before following either workflow.
+Use Studio for interactive changes, or the separate `pawabase-iac` package for versioned definitions. The documented IaC workflow is `pawabase validate` (offline), `pawabase emulate` (simulated), `pawabase plan` (reads real environment), then `pawabase deploy` (writes). `merge` mode preserves unmanaged definitions; `override` can remove definitions absent from code. IaC does not yet manage all environment-level settings such as auth providers, API keys, domains, alarms, and backup schedules. Its command is `pawabase` (`init`, `validate`, `emulate`, `plan`, `deploy`, `whoami`); the Python client ships no command of its own.
 
 A resource definition change can create a pending physical migration. Review the migration SQL and risk notes before applying. Auto-safe additions and destructive retypes/drops are different cases. For a required new field on a populated table, stage nullable/add, backfill, then enforce the requirement. For an external SQL change, inspect schema drift and any cache or change-capture effects.
 

@@ -1,32 +1,45 @@
 # Source, compatibility, and verification
 
-This repository is a portable skill, not a copy of all Pawabase documentation. Product docs, SDK releases, and a deployed server can differ. Resolve an implementation question in this order:
+This skill is a guide, not a copy of the Pawabase docs. Product docs, package releases and a deployed server move at different
+speeds. When something matters, resolve it in this order:
 
-1. **Target deployment:** Studio's environment-specific API Explorer/OpenAPI, capabilities, and settings.
-2. **Installed client:** package version, exported types or Python module members, and source if available.
-3. **Product docs:** [Pawabase docs repository](https://github.com/Pawabase/pawabase-docs), especially the topic path below.
-4. **Server implementation:** [Pawabase runtime repository](https://github.com/Pawabase/pawabase), for behavior not covered by the contract.
+1. **The target environment.** Its own OpenAPI in Studio → API Explorer, its settings, and a real request. Table fields,
+   enabled operations and policies differ per environment.
+2. **The installed client.** Its version, exported types or module members, and its source.
+3. **The product docs.** The [docs repository](https://github.com/Pawabase/pawabase-docs), starting from the topic table below.
+4. **The server source.** The [runtime repository](https://github.com/Pawabase/pawabase), for behaviour the contract does not
+   spell out.
 
-Do not elevate an example in newer docs to an SDK guarantee. If sources disagree, identify the exact version or environment and say what was verified.
+Never promote a docs example to a client guarantee. When sources disagree, name the version or environment you checked and say
+what you verified.
 
-## Verified local baseline when authored
+## Verified baseline
 
-| Artifact | Checked state | Consequence |
+| Package or source | Checked | What it means |
 | --- | --- | --- |
-| `@pawabase/client` | `0.1.0` checked-in package | Exports data, auth, storage, functions, flows, routes, realtime and raw `request`. No `ai` or `manage` export in `client.ts`. |
-| Python `pawabase` | `0.2.0` wheel inspected | Flat data, function, event, flow, and deployment methods plus function kit/CLI. No `pb.auth`, `pb.from_`, `pb.realtime`, `pb.ai`, or `pb.manage`. The runtime inventory says functions are not a current product area; verify deployment support. |
-| `pawabase-iac` | Separate package described in current docs | Python declarations plus `validate`, `emulate`, `plan`, `deploy`; do not confuse its CLI with the Python function kit's CLI. |
-| Public OpenAPI | `pawabase-docs/openapi/public.json` snapshot | 77 public paths; excludes an environment's dynamic resource schema and management internals. |
-| Product docs | Checked-out docs repository | Some pages describe a broader, newer client interface. Check installed versions before copying. |
+| `@pawabase/client` | `0.7.0` source | Records, auth with MFA, passkeys, SSO and organizations, storage with share links and transforms, realtime channels and `realtime.live`, flows, routes, AI models, agents and knowledge, captcha, `asUser`, `asMachine`. Management in `@pawabase/client/manage` and `@pawabase/client/admin`. `pawabase-types` CLI for generated types. |
+| Python `pawabase` | `0.9.0` source | The same areas in snake_case: `pb.from_`, `pb.auth`, `pb.storage`, `pb.realtime` (channels and live queries on `AsyncPawabase`), `pb.flows.invoke`, `pb.routes`, `pb.ai`, `pb.captcha`, `pb.manage`, `pb.admin`, `as_user`, `as_machine`. No function kit and no CLI. |
+| `pawabase-iac` | `0.2.4` source | A separate package for definitions as Python code. Its CLI is also called `pawabase`: `init`, `validate`, `emulate`, `plan`, `deploy`, `whoami`. |
+| Public OpenAPI | `pawabase-docs/openapi/public.json` | 78 public paths. It leaves out each environment's own table schema and the management surface; use the environment's API Explorer for those. |
+| Product docs | `pawabase-docs` at `e446b6a` | The pages the [docs catalog](docs-catalog.md) lists. |
 
-Inspect Python with `python3 -c 'import pawabase; print(pawabase.__version__, pawabase.__all__)'`. Inspect TypeScript with `node_modules/@pawabase/client/package.json` and exported declarations. For raw HTTP, use the environment's OpenAPI; table fields, policies, and enabled operations vary.
+Check the installed versions before relying on a row:
 
-For a command named `pawabase`, inspect `command -v pawabase`, `pawabase --help`, and the installed distribution. Do not infer that the function kit's `deploy` and IaC's `deploy` are interchangeable. For runtime feature status, read `PAWABASE_FEATURE_INVENTORY.md` section **Explicit boundaries and non-features** and check the deployed capability before proposing a legacy path.
-The `/mcp/v1` management transport is excluded from generated OpenAPI; use the runtime's `docs/mcp.md` and `pawabase_server/mcp/` for its contract. The client tool catalog is filtered by the connected key's scopes.
+```bash
+node -p "require('@pawabase/client/package.json').version"
+python3 -c 'import pawabase; print(pawabase.__version__)'
+python3 -c 'import pawabase_iac; print(pawabase_iac.__version__)'
+```
+
+For TypeScript, read the declarations under `node_modules/@pawabase/client/dist`. For Python, `help()` on the object. A
+`pawabase` command on the path belongs to `pawabase-iac`: check with `command -v pawabase` and `pawabase --help`.
+
+`/mcp/v1` is not in the generated OpenAPI. Its contract is the runtime's `docs/mcp.md` and `pawabase_server/mcp/`, and the tool
+list a client sees is filtered by the connected key's scope.
 
 ## Topic locator
 
-Paths below are relative to the [docs repository](https://github.com/Pawabase/pawabase-docs):
+Paths are relative to the [docs repository](https://github.com/Pawabase/pawabase-docs):
 
 | Topic | Start with |
 | --- | --- |
@@ -34,12 +47,15 @@ Paths below are relative to the [docs repository](https://github.com/Pawabase/pa
 | TypeScript and Python | `quickstarts/javascript.mdx`, `quickstarts/node.mdx`, `quickstarts/react.mdx`, `quickstarts/python.mdx` |
 | Data API | `database/how-data-works.mdx`, `database/rest-api.mdx`, `database/relations.mdx` |
 | Access and auth | `reference/keys-and-security.mdx`, `policies/how-rules-work.mdx`, `auth/how-auth-works.mdx` |
+| Organizations and company sign-in | `auth/organizations.mdx`, `auth/enterprise-sign-in.mdx`, `auth/enterprise-connections.mdx`, `auth/machines.mdx` |
 | Realtime | `realtime/channels.mdx`, `realtime/record-changes.mdx`, `realtime/connection.mdx` |
 | Storage | `storage/upload.mdx`, `storage/urls-and-links.mdx`, `storage/access.mdx` |
-| Logic/automation | `logic/flows.mdx`, `automation/overview.mdx`, `automation/reliability.mdx` |
+| Logic and automation | `logic/flows.mdx`, `automation/overview.mdx`, `automation/reliability.mdx` |
 | AI | `ai/overview.mdx`, `ai/gateway.mdx`, `ai/agents/overview.mdx` |
-| MCP and agent connections | `ai/mcp.mdx`, `ai/apps/overview.mdx`, plus runtime `docs/mcp.md` |
+| MCP and agent connections | `ai/mcp.mdx`, `ai/apps/overview.mdx`, and the runtime's `docs/mcp.md` |
 | Operations | `environments/overview.mdx`, `tools/iac/overview.mdx`, `activity/overview.mdx` |
 | Cloud, release, recovery | `cloud/overview.mdx`, `environments/api-versions.mdx`, `backups/overview.mdx`, `guides/production-checklist.mdx` |
 
-For contributor work, the runtime's `ARCHITECTURE.md` and `PAWABASE_FEATURE_INVENTORY.md` give the service map; actual behavior lives in `pawabase_server/`. The [TypeScript SDK](https://github.com/Pawabase/pawabase-js) and [Python SDK](https://github.com/Pawabase/pawabase-python) repositories provide package sources, subject to installed-version checks.
+For work on the server itself, `ARCHITECTURE.md` and `PAWABASE_FEATURE_INVENTORY.md` (its implementation map) in the runtime
+repository point to the code; behaviour lives in `pawabase_server/` and its tests. Client sources:
+[TypeScript](https://github.com/Pawabase/pawabase-js) and [Python](https://github.com/Pawabase/pawabase-python).
